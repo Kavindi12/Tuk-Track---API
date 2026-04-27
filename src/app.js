@@ -31,7 +31,6 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/provinces', provinceRoutes);
 app.use('/api/districts', districtRoutes);
@@ -41,12 +40,10 @@ app.use('/api/drivers', driverRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/locations', locationRoutes);
 
-// 404 handler
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Route not found.' });
 });
 
-// Global error handler
 app.use(errorHandler);
 
 export default app;

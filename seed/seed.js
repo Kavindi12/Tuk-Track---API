@@ -1,16 +1,17 @@
-require('dotenv').config();
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import dotenv from 'dotenv';
+import { resolve } from 'path';
+dotenv.config({ path: resolve(process.cwd(), '.env') });
 
-const Province = require('../src/models/Province');
-const District = require('../src/models/District');
-const PoliceStation = require('../src/models/PoliceStation');
-const User = require('../src/models/User');
-const Driver = require('../src/models/Driver');
-const Vehicle = require('../src/models/Vehicle');
-const LocationPing = require('../src/models/LocationPing');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
-// ── Sri Lanka geographic data ────────────────────────────────────────────────
+import Province from '../src/models/Province.js';
+import District from '../src/models/District.js';
+import PoliceStation from '../src/models/PoliceStation.js';
+import User from '../src/models/User.js';
+import Driver from '../src/models/Driver.js';
+import Vehicle from '../src/models/Vehicle.js';
+import LocationPing from '../src/models/LocationPing.js';
 
 const PROVINCES = [
   { name: 'Western Province', code: 'WP' },
@@ -24,7 +25,6 @@ const PROVINCES = [
   { name: 'Sabaragamuwa Province', code: 'SGP' },
 ];
 
-// Districts keyed by province code
 const DISTRICTS_BY_PROVINCE = {
   WP: ['Colombo', 'Gampaha', 'Kalutara'],
   CP: ['Kandy', 'Matale', 'Nuwara Eliya'],
@@ -37,7 +37,6 @@ const DISTRICTS_BY_PROVINCE = {
   SGP: ['Kegalle', 'Ratnapura'],
 };
 
-// Station names per district (2 per district for seed simplicity)
 const STATIONS_BY_DISTRICT = {
   Colombo: ['Colombo Fort Police Station', 'Nugegoda Police Station'],
   Gampaha: ['Gampaha Police Station', 'Negombo Police Station'],
@@ -66,7 +65,6 @@ const STATIONS_BY_DISTRICT = {
   Ratnapura: ['Ratnapura Police Station', 'Embilipitiya Police Station'],
 };
 
-// Approximate bounding boxes for each province [minLat, maxLat, minLon, maxLon]
 const PROVINCE_BOUNDS = {
   WP:  [6.70, 7.20, 79.80, 80.20],
   CP:  [7.00, 7.50, 80.50, 81.00],
@@ -78,8 +76,6 @@ const PROVINCE_BOUNDS = {
   UP:  [6.60, 7.20, 80.70, 81.40],
   SGP: [6.40, 7.00, 80.20, 80.80],
 };
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 const rand = (min, max) => Math.random() * (max - min) + min;
 const randInt = (min, max) => Math.floor(rand(min, max + 1));
@@ -94,7 +90,6 @@ function randomCoord(bounds) {
   };
 }
 
-// Walk coordinates step by step to simulate movement
 function walkCoord(lat, lon, bounds) {
   const [minLat, maxLat, minLon, maxLon] = bounds;
   const dLat = rand(-0.005, 0.005);
@@ -104,8 +99,6 @@ function walkCoord(lat, lon, bounds) {
     longitude: Math.min(maxLon, Math.max(minLon, parseFloat((lon + dLon).toFixed(6)))),
   };
 }
-
-// ── Main seed function ───────────────────────────────────────────────────────
 
 async function seed() {
   await mongoose.connect(process.env.MONGODB_URI);
@@ -121,13 +114,11 @@ async function seed() {
     LocationPing.deleteMany({}),
   ]);
 
-  // ── Provinces ──
   console.log('Seeding provinces...');
   const provinces = await Province.insertMany(PROVINCES);
   const provinceMap = {};
   provinces.forEach((p) => { provinceMap[p.code] = p; });
 
-  // ── Districts ──
   console.log('Seeding districts...');
   const districtDocs = [];
   for (const [code, names] of Object.entries(DISTRICTS_BY_PROVINCE)) {
@@ -139,7 +130,6 @@ async function seed() {
   const districtMap = {};
   districts.forEach((d) => { districtMap[d.name] = d; });
 
-  // ── Police Stations ──
   console.log('Seeding police stations...');
   const stationDocs = [];
   for (const [districtName, stationNames] of Object.entries(STATIONS_BY_DISTRICT)) {
@@ -157,7 +147,6 @@ async function seed() {
   }
   const stations = await PoliceStation.insertMany(stationDocs);
 
-  // ── Admin & Officer Users ──
   console.log('Seeding users...');
   const adminPassword = await bcrypt.hash('admin123', 12);
   const officerPassword = await bcrypt.hash('officer123', 12);
@@ -184,7 +173,6 @@ async function seed() {
   }
   await User.insertMany(officerUsers);
 
-  // ── Drivers ──
   console.log('Seeding 220 drivers...');
   const sinhalaFirstNames = ['Kamal', 'Nimal', 'Sunil', 'Priya', 'Chathura', 'Lasantha', 'Ruwan', 'Damith', 'Saman', 'Gayan', 'Upul', 'Chaminda', 'Tharaka', 'Mahesh', 'Dilan', 'Isuru', 'Janaka', 'Kasun', 'Lahiru', 'Malith'];
   const sinhalaLastNames = ['Perera', 'Silva', 'Fernando', 'Jayawardena', 'Wickramasinghe', 'Gunawardena', 'Dissanayake', 'Bandara', 'Rajapaksa', 'Senanayake', 'Mendis', 'Dias', 'Gunasekara', 'Liyanage', 'Rathnayake'];
@@ -213,7 +201,6 @@ async function seed() {
   }
   const drivers = await Driver.insertMany(driverDocs);
 
-  // ── Vehicles ──
   console.log('Seeding 220 vehicles...');
   const vehicleDocs = [];
   const vehicleProvinceMap = {};
@@ -246,7 +233,6 @@ async function seed() {
   }
   const vehicles = await Vehicle.insertMany(vehicleDocs);
 
-  // Create device user accounts for the first 20 active vehicles
   console.log('Creating device user accounts for 20 vehicles...');
   const devicePassword = await bcrypt.hash('device123', 12);
   const deviceUsers = [];
@@ -266,12 +252,10 @@ async function seed() {
     deviceCount++;
   }
 
-  // ── Location Pings — 7 days of history for all active vehicles ──
-  console.log('Seeding 7 days of location pings (this may take a moment)...');
-
+  console.log('Seeding 7 days of location pings (this will take a few minutes)...');
   const NOW = Date.now();
   const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-  const PING_INTERVAL_MS = 5 * 60 * 1000; // every 5 minutes
+  const PING_INTERVAL_MS = 5 * 60 * 1000;
 
   const pingBatch = [];
   let pingTotal = 0;
@@ -283,13 +267,7 @@ async function seed() {
     const bounds = vehicleProvinceMap[vi].bounds;
     let { latitude, longitude } = randomCoord(bounds);
 
-    // Walk forward through 7 days, ping every 5 minutes
-    for (
-      let t = NOW - SEVEN_DAYS_MS;
-      t <= NOW;
-      t += PING_INTERVAL_MS
-    ) {
-      // 10% chance vehicle is "parked" (no ping for this slot)
+    for (let t = NOW - SEVEN_DAYS_MS; t <= NOW; t += PING_INTERVAL_MS) {
       if (Math.random() < 0.1) continue;
 
       const walked = walkCoord(latitude, longitude, bounds);
@@ -308,7 +286,6 @@ async function seed() {
 
       pingTotal++;
 
-      // Insert in chunks of 5000 to avoid memory issues
       if (pingBatch.length >= 5000) {
         await LocationPing.insertMany(pingBatch, { ordered: false });
         process.stdout.write(`\r  Inserted ${pingTotal} pings...`);
@@ -330,9 +307,9 @@ async function seed() {
   console.log(`  Vehicles:       ${vehicles.length}`);
   console.log(`  Location pings: ~${pingTotal}`);
   console.log(`\nTest credentials:`);
-  console.log(`  Admin    — email: admin@police.lk       password: admin123`);
-  console.log(`  Officer  — email: officer1@police.lk    password: officer123`);
-  console.log(`  Device   — email: ${deviceUsers[0] ? deviceUsers[0].email : 'see DB'}  password: device123`);
+  console.log(`  Admin   — email: admin@police.lk      password: admin123`);
+  console.log(`  Officer — email: officer1@police.lk   password: officer123`);
+  console.log(`  Device  — email: ${deviceUsers[0]?.email}  password: device123`);
 
   await mongoose.disconnect();
 }

@@ -2,7 +2,6 @@ import dotenv from 'dotenv';
 import { resolve } from 'path';
 dotenv.config({ path: resolve(process.cwd(), '.env') });
 
-// Add this line temporarily to diagnose
 console.log('MONGODB_URI:', process.env.MONGODB_URI);
 
 import app from './app.js';
