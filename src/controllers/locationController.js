@@ -110,7 +110,7 @@ export const getActiveVehicles = async (req, res, next) => {
           as: 'vehicle.province',
         },
       },
-      { $unwind: { path: '$vehicle.province', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$vehicle.province', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'districts',
@@ -119,7 +119,7 @@ export const getActiveVehicles = async (req, res, next) => {
           as: 'vehicle.district',
         },
       },
-      { $unwind: { path: '$vehicle.district', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$vehicle.district', preserveNullAndEmptyArrays: true } },
       {
         $project: {
           vehicle: {
