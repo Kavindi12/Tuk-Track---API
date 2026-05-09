@@ -30,8 +30,4 @@ for law enforcement use.
 ## GitHub Repository
 https://github.com/Kavindi12/Tuk-Track---API
 
-## API Documentation
-Available at /api-docs after deployment
 
-## Deployment
-API URL: [Add after deploying to Render]
